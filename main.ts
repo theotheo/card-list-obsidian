@@ -118,9 +118,9 @@ class CardListView extends ItemView {
 
       const markdownFilePath = currentFile.path
 
-      const file = app.vault.getAbstractFileByPath(markdownFilePath)
+      const markdownFile = app.vault.getAbstractFileByPath(markdownFilePath)
       const content = await app.vault.adapter.read(markdownFilePath)
-      const metadata = app.metadataCache.getFileCache(file as TFile)
+      const metadata = app.metadataCache.getFileCache(markdownFile as TFile)
 
       title.setText(currentFile.basename)
 
@@ -193,7 +193,7 @@ class CardListView extends ItemView {
       });
 
       const navFileDelete = card.createDiv({ cls: 'card-list-file-delete menu-item-icon' })
-      navFileDelete.appendChild(getIcon("lucide-x"));
+      navFileDelete.appendChild(getIcon('lucide-x'));
       navFileDelete.addEventListener('click', async () => {
         await this.removeFile(currentFile);
         this.redraw();
@@ -250,12 +250,12 @@ class CardListView extends ItemView {
 
       const createLeaf = shouldSplit || leaf.getViewState().pinned;
       if (createLeaf) {
-        if (this.plugin.data.openType == 'split')
-          leaf = this.app.workspace.getLeaf('split');
-        else if (this.plugin.data.openType == 'window')
-          leaf = this.app.workspace.getLeaf('window');
+        if (this.plugin.data.openType === 'split')
+          {leaf = this.app.workspace.getLeaf('split');}
+        else if (this.plugin.data.openType === 'window')
+          {leaf = this.app.workspace.getLeaf('window');}
         else
-          leaf = this.app.workspace.getLeaf('tab');
+          {leaf = this.app.workspace.getLeaf('tab');}
       }
       leaf.openFile(targetFile);
     } else {
@@ -490,13 +490,13 @@ class CardListSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Open note in")
-      .setDesc("Open the clicked recent file record in a new tab, split, or window (only works on the desktop app).")
+      .setName('Open note in')
+      .setDesc('Open the clicked recent file record in a new tab, split, or window (only works on the desktop app).')
       .addDropdown((dropdown) => {
         const options: Record<string, string> = {
-          "tab": "tab",
-          "split": "split",
-          "window": "window",
+          'tab': 'tab',
+          'split': 'split',
+          'window': 'window',
         };
 
         dropdown
