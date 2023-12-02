@@ -1,0 +1,85 @@
+.card-list-title {
+  justify-content: space-between;
+  align-items: unset;
+}
+
+.card-list-title-content {
+  flex-grow: 1;
+}
+
+.card-list-file-delete {
+  display: none;
+}
+
+.card-list-title:hover .card-list-file-delete {
+  display: flex;
+  cursor: pointer;
+}
+
+.card-list-file-delete:hover {
+  color: var(--nav-item-color-hover);
+}
+
+.card-list-donation {
+  width: 70%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.card-list-donate-button {
+  margin: 10px;
+}
+
+.card-container {
+  display: flex;
+  max-width: 800px;
+  margin: 20px auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 150px;
+}
+
+.card-container:hover .card-list-file-delete {
+  display: flex;
+  cursor: pointer;
+}
+
+.text-container {
+  flex: 1;
+  padding: 10px 5px 5px 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+}
+
+.text-container h4 {
+  margin: 0 0 0px;
+}
+
+.text-snippet {
+  display: flex;
+  word-wrap: break-word;
+}
+
+.details {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+}
+
+.image-container {
+  flex: 0 0 40%;
+  padding: 5px;
+  min-width: 30%;
+  /* background: #eee; */
+
+  /* Uncomment the line below if you want a border between text and image */
+  /* border-left: 1px solid #ccc; */
+}
+
+.image-container img {
+  width: auto;
+  height: 100%;
+}
