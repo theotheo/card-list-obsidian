@@ -104,7 +104,7 @@ class CardListView extends ItemView {
     const childrenEl = rootEl.createDiv({ cls: 'nav-folder-children' });
 
 
-    const handleInput = async (): void {
+    const handleInput = async (): void => {
       
       const inputValue = inputFilter.value;
 
@@ -131,7 +131,7 @@ class CardListView extends ItemView {
 
       childrenEl.empty()
 
-      data.forEach(async file => {
+      data.forEach(async (file): void => {
         const el = await this.renderListElement(file, openFile);
         childrenEl.appendChild(el);
       });
@@ -139,7 +139,7 @@ class CardListView extends ItemView {
 
     }
 
-    function debounce(func, delay) {
+    function debounce(func, delay): Function {
       let timeoutId;
       
       return function(...args) {        
@@ -161,7 +161,7 @@ class CardListView extends ItemView {
 
   };
 
-  private async renderListElement(currentFile, openFile): HTMLElement {
+  private async renderListElement(currentFile, openFile): Promise {
 
     const card = createDiv({ cls: 'card-container nav-file card-list-file' });
     const textContainer = card.createDiv({ cls: 'text-container' });
