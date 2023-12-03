@@ -96,19 +96,9 @@ class CardListView extends ItemView {
     this.registerEvent(this.app.workspace.on('file-open', this.update));
   }
 
-  public readonly redraw = (): void => {
-    const openFile = this.app.workspace.getActiveFile();
+  private async renderListElement(currentFile, openFile) {
 
-    const rootEl = createDiv({ cls: 'nav-folder mod-root' });
-    const childrenEl = rootEl.createDiv({ cls: 'nav-folder-children' });
-
-    const imageUrl = /!\[\[(.*\.(?:jpe?g|png))\]\]/;
-
-    // const adapter = this.app.vault.adapter as FileSystemAdapterWithInternalApi;
-
-    this.data.recentFiles.forEach(async (currentFile) => {
-
-      const card = childrenEl.createDiv({ cls: 'card-container nav-file card-list-file' });
+      const card = createDiv({ cls: 'card-container nav-file card-list-file' });
       const textContainer = card.createDiv({ cls: 'text-container' });
       const title = textContainer.createEl('h4', {cls: 'card-list-title'});
       const textSnippet = textContainer.createEl('p', { cls: 'text-snippet' });
@@ -119,7 +109,7 @@ class CardListView extends ItemView {
       const markdownFilePath = currentFile.path
 
       const markdownFile = app.vault.getAbstractFileByPath(markdownFilePath)
-      const content = await app.vault.adapter.read(markdownFilePath)
+      const content = await app.vault.cachedRead(markdownFile as TFile)
       const metadata = app.metadataCache.getFileCache(markdownFile as TFile)
 
       title.setText(currentFile.basename)
@@ -137,6 +127,7 @@ class CardListView extends ItemView {
 
       }
 
+      const imageUrl = /!\[\[(.*\.(?:jpe?g|png))\]\]/;
       const matches = content.match(imageUrl)
       if (matches) {
         const imgPath = matches[1];
@@ -198,11 +189,76 @@ class CardListView extends ItemView {
         await this.removeFile(currentFile);
         this.redraw();
       })
-    });
+
+      return card;
+    }
+
+  public readonly redraw = async (): void => {
+    const openFile = this.app.workspace.getActiveFile();
+
+    const rootEl = createDiv({ cls: 'nav-folder mod-root' });
+    const inputFilter = rootEl.createEl('input', { type: 'text', placeholder: 'поиск' });
+    const childrenEl = rootEl.createDiv({ cls: 'nav-folder-children' });
+
+
+    async function handleInput() {
+      
+      const inputValue = inputFilter.value;
+
+      let data = [];
+      const allFiles = app.vault.getMarkdownFiles().sort((a, b) => (b.stat.mtime - a.stat.mtime))
+
+      const regex = new RegExp(inputValue)
+      if (inputValue.length > 0) {
+        let index = 0
+                
+        for (const file of allFiles) {
+          console.log(index);
+          
+          const contents = await this.app.vault.cachedRead(file);
+          if (contents.match(regex)  ) {
+            data.push(file)
+            index += 1;
+          }
+          if (index > (this.data.maxLength || defaultMaxLength)) break;
+        }
+      } else {
+        data = allFiles.slice(0, this.data.maxLength || defaultMaxLength) 
+      }
+
+      childrenEl.empty()
+
+      data.forEach(async file => {
+        const el = await this.renderListElement(file, openFile);
+        childrenEl.appendChild(el);
+      });
+
+
+    }
+
+    function debounce(func, delay) {
+      let timeoutId;
+      
+      return function() {
+        const args = arguments;
+        
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(function() {
+          func.apply(this, args);
+        }, delay);
+      };
+    }
+
+    // Добавляем обработчик события input
+    inputFilter.addEventListener('input', debounce(handleInput.bind(this), 300));
+  
+    await handleInput.bind(this)()
 
     const contentEl = this.containerEl.children[1];
     contentEl.empty();
     contentEl.appendChild(rootEl);
+
+
   };
 
   private readonly removeFile = async (file: FilePath): Promise<void> => {

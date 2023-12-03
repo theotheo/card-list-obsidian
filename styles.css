@@ -83,3 +83,7 @@
   width: auto;
   height: 100%;
 }
+
+.nav-folder input {
+  width: 100%;
+}
