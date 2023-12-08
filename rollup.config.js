@@ -5,7 +5,7 @@ import commonjs from '@rollup/plugin-commonjs';
 export default {
   input: 'main.tsx',
   output: {
-    dir: '/home/i/Documents/main/.obsidian/plugins/recent-files-obsidian',
+    dir: '.',
     sourcemap: 'inline',
     format: 'cjs',
     exports: 'default'
