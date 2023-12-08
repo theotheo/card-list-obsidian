@@ -1,6 +1,6 @@
 {
   "name": "card-list-obsidian",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Evernote-like notes list",
   "main": "main.js",
   "scripts": {
