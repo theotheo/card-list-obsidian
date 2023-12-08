@@ -14,6 +14,7 @@ import {
   WorkspaceLeaf,
 } from 'obsidian';
 import { createContext,StrictMode } from 'react';
+import * as React from 'react';
 import { createRoot,Root } from 'react-dom/client';
 import {
   RecoilRoot
@@ -115,7 +116,6 @@ class CardListView extends ItemView {
 				<ReactView plugin={this} />
 			</RecoilRoot>
 		);
-
 
 
   };
