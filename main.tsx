@@ -1,3 +1,4 @@
+import { ReactView } from './src/ReactView';
 import {
   addIcon,
   App,
@@ -12,10 +13,8 @@ import {
   TFile,
   WorkspaceLeaf,
 } from 'obsidian';
-
-import { StrictMode, createContext } from "react";
-import { Root, createRoot } from "react-dom/client";
-import { ReactView } from "./src/ReactView";
+import { createContext,StrictMode } from 'react';
+import { createRoot,Root } from 'react-dom/client';
 import {
   RecoilRoot
 } from 'recoil'
@@ -48,6 +47,10 @@ const CardListViewType = 'card-list';
 class CardListView extends ItemView {
   private readonly plugin: RecentFilesPlugin;
   private data: CardListData;
+
+  private readonly keys = {
+    customWidthKey: 'CardListPlugin-CustomWidth'
+  }
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -117,13 +120,6 @@ class CardListView extends ItemView {
 
   };
 
-
-  // private readonly removeFile = async (file: FilePath): Promise<void> => {
-  //   this.data.recentFiles = this.data.recentFiles.filter(
-  //     (currFile) => currFile.path !== file.path,
-  //   );
-  //   await this.plugin.pruneLength(); // Handles the save
-  // }
 
   // private readonly updateData = async (file: TFile): Promise<void> => {
   //   this.data.recentFiles = this.data.recentFiles.filter(
