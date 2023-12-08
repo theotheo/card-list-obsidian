@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { atom, useRecoilState, useSetRecoilState } from 'recoil';
 import {
     TFile,
 } from 'obsidian';
+import { useEffect,useState } from 'react';
 import * as React from 'react';
+import { atom, useRecoilState, useSetRecoilState } from 'recoil';
 
 const _searchValue = atom({
     key: 'searchValue',
@@ -17,7 +17,7 @@ const _searchList = atom({
 
 const defaultMaxLength = 50
 
-const CardView = ({ currentFile, plugin }) => {
+const CardView = ({ currentFile, plugin }): React.JSX.Element  => {
     let textSnippet = ''
     let date;
     let tags;
@@ -68,8 +68,8 @@ const CardView = ({ currentFile, plugin }) => {
 
     useEffect(() => {
         (async () => {
-            const content = await plugin.app.vault.cachedRead(markdownFile as TFile)
-            setContent(content)
+            const fileContent = await plugin.app.vault.cachedRead(markdownFile as TFile)
+            setContent(fileContent)
         })()
     }, [])
 
@@ -91,31 +91,27 @@ const CardView = ({ currentFile, plugin }) => {
     </div>
 }
 
-export const SearchView = () => {
+export const SearchView = (): React.JSX.Element => {
     const [searchValue, setSearchValue] = useRecoilState(_searchValue);
     const [searchList, setSearchList] = useRecoilState(_searchList);
-
-    function handleClick(e) {
-        setSearchValue(e)
-    }
 
     return <div className="oz-folder-pane-horizontal"
         style={{ width: '50%' }}>
         {searchList.map(search =>
-            <div onClick={e => handleClick(search.query)} key={search.timestamp}> {search.query} </div>
+            <div onClick={e => setSearchValue(search.query)} key={search.query}> {search.query} </div>
         )}
     </div>
 }
 
 
-export const CardsView = ({ plugin }) => {
+export const CardsView = ({ plugin }): React.JSX.Element => {
 
     const [searchValue, setSearchValue] = useRecoilState(_searchValue);
     const [inputValue, setInputValue] = useState('');
     const setSearchList = useSetRecoilState(_searchList);
     const [files, setFiles] = useState([]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e): void => {
         e.preventDefault();
         setSearchValue(inputValue)
         setSearchList(prev => [...prev, { query: inputValue, timestamp: new Date() }])
@@ -128,9 +124,9 @@ export const CardsView = ({ plugin }) => {
         let data = [];
         const allFiles = plugin.app.vault.getMarkdownFiles().sort((a, b) => (b.stat.mtime - a.stat.mtime))
 
-        const regex = new RegExp(searchValue)
+        const regex = new RegExp(searchValue);
         
-        async function getData() {
+        (async () => {
             if (searchValue.length > 0) {
                 let index = 0
 
@@ -147,8 +143,7 @@ export const CardsView = ({ plugin }) => {
                 data = allFiles.slice(0, plugin.data.maxLength || defaultMaxLength) 
             }
             setFiles(data)
-        }
-        getData()
+        })()
     }, [searchValue])
 
 
@@ -166,9 +161,7 @@ export const CardsView = ({ plugin }) => {
 }
 
 
-export const ReactView = ({ plugin }) => {
-    return <div className="file-tree-container-horizontal">
+export const ReactView = ({ plugin }): React.JSX.Element => <div className="file-tree-container-horizontal">
         <SearchView />
         <CardsView plugin={plugin} />
     </div>
-};
