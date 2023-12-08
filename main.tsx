@@ -13,6 +13,13 @@ import {
   WorkspaceLeaf,
 } from 'obsidian';
 
+import { StrictMode, createContext } from "react";
+import { Root, createRoot } from "react-dom/client";
+import { ReactView } from "./src/ReactView";
+import {
+  RecoilRoot
+} from 'recoil'
+
 interface FilePath {
   path: string;
   basename: string;
@@ -69,202 +76,54 @@ class CardListView extends ItemView {
     return 'clock';
   }
 
-  public onHeaderMenu(menu: Menu): void {
-    menu
-      .addItem((item) => {
-        item
-          .setTitle('Clear list')
-          .setIcon('sweep')
-          .onClick(async () => {
-            this.data.recentFiles = [];
-            await this.plugin.saveData();
-            this.redraw();
-          });
-      })
-      .addItem((item) => {
-        item
-          .setTitle('Close')
-          .setIcon('cross')
-          .onClick(() => {
-            this.app.workspace.detachLeavesOfType(CardListViewType);
-          });
-      });
-  }
+  // public onHeaderMenu(menu: Menu): void {
+  //   menu
+  //     .addItem((item) => {
+  //       item
+  //         .setTitle('Clear list')
+  //         .setIcon('sweep')
+  //         .onClick(async () => {
+  //           this.data.recentFiles = [];
+  //           await this.plugin.saveData();
+  //           this.redraw();
+  //         });
+  //     })
+  //     .addItem((item) => {
+  //       item
+  //         .setTitle('Close')
+  //         .setIcon('cross')
+  //         .onClick(() => {
+  //           this.app.workspace.detachLeavesOfType(CardListViewType);
+  //         });
+  //     });
+  // }
 
   public load(): void {
     super.load();
-    // this.registerEvent(this.app.workspace.on('file-open', this.update));
+    this.registerEvent(this.app.workspace.on('file-open', this.update));
   }
 
   public readonly redraw = async (): void => {
     const openFile = this.app.workspace.getActiveFile();
 
-    const rootEl = createDiv({ cls: 'nav-folder mod-root' });
-    const inputFilter = rootEl.createEl('input', { type: 'text', placeholder: 'поиск' });
-    const childrenEl = rootEl.createDiv({ cls: 'nav-folder-children' });
+    this.root = createRoot(this.containerEl.children[1]);
+		this.root.render(
+			<RecoilRoot>
+				<ReactView plugin={this} />
+			</RecoilRoot>
+		);
 
-
-    const handleInput = async (): void => {
-      
-      const inputValue = inputFilter.value;
-
-      let data = [];
-      const allFiles = app.vault.getMarkdownFiles().sort((a, b) => (b.stat.mtime - a.stat.mtime))
-
-      const regex = new RegExp(inputValue)
-      if (inputValue.length > 0) {
-        let index = 0
-                
-        for (const file of allFiles) {
-          console.log(index);
-          
-          const contents = await this.app.vault.cachedRead(file);
-          if (contents.match(regex)  ) {
-            data.push(file)
-            index += 1;
-          }
-          if (index > (this.data.maxLength || defaultMaxLength)) break;
-        }
-      } else {
-        data = allFiles.slice(0, this.data.maxLength || defaultMaxLength) 
-      }
-
-      childrenEl.empty()
-
-      data.forEach(async (file): void => {
-        const el = await this.renderListElement(file, openFile);
-        childrenEl.appendChild(el);
-      });
-
-
-    }
-
-    function debounce(func, delay): Function {
-      let timeoutId;
-      
-      return function(...args) {        
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(function() {
-          func.apply(this, args);
-        }, delay);
-      };
-    }
-
-    inputFilter.addEventListener('input', debounce(handleInput, 300));
-  
-    handleInput()
-
-    const contentEl = this.containerEl.children[1];
-    contentEl.empty();
-    contentEl.appendChild(rootEl);
 
 
   };
 
-  private async renderListElement(currentFile, openFile): Promise {
 
-    const card = createDiv({ cls: 'card-container nav-file card-list-file' });
-    const textContainer = card.createDiv({ cls: 'text-container' });
-    const title = textContainer.createEl('h4', {cls: 'card-list-title'});
-    const textSnippet = textContainer.createEl('p', { cls: 'text-snippet' });
-    const details = textContainer.createDiv({ cls: 'details' });
-    const date = details.createEl('p', { cls: 'date' });
-    const tags = details.createEl('p', { cls: 'tags' });
-
-    const markdownFilePath = currentFile.path
-
-    const markdownFile = app.vault.getAbstractFileByPath(markdownFilePath)
-    const content = await app.vault.cachedRead(markdownFile as TFile)
-    const metadata = app.metadataCache.getFileCache(markdownFile as TFile)
-
-    title.setText(currentFile.basename)
-
-
-    
-    if (metadata.frontmatter) {
-      const withoutFrontmatter = content.split('---', 3)[2]
-      textSnippet.setText(withoutFrontmatter.substring(0, 265));
-
-      const created_at = moment(metadata.frontmatter[this.data.datetime_field])
-
-      date.textContent = created_at.format('MMM DD')
-      tags.textContent = metadata.frontmatter.tags?.reduce((result: string, tag: string) => `${result} #${tag}`, '')
-
-    }
-
-    const imageUrl = /!\[\[(.*\.(?:jpe?g|png))\]\]/;
-    const matches = content.match(imageUrl)
-    if (matches) {
-      const imgPath = matches[1];
-      const imgFullPath = app.metadataCache.getFirstLinkpathDest(imgPath, markdownFilePath)
-
-      const imageContainer = card.createDiv({ cls: 'image-container' });
-      const img = imageContainer.createEl('img')
-
-      img.src = this.app.vault.getResourcePath(imgFullPath);
-      img.alt = currentFile.basename;
-    }
-
-    if (openFile && currentFile.path === openFile.path) {
-      card.addClass('is-active');
-    }
-
-    card.setAttr('draggable', 'true');
-    card.addEventListener('dragstart', (event: DragEvent) => {
-      const file = this.app.metadataCache.getFirstLinkpathDest(
-        currentFile.path,
-        '',
-      );
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dragManager = (this.app as any).dragManager;
-      const dragData = dragManager.dragFile(event, file);
-      dragManager.onDragStart(event, dragData);
-    });
-
-    card.addEventListener('mouseover', (event: MouseEvent) => {
-      this.app.workspace.trigger('hover-link', {
-        event,
-        source: CardListViewType,
-        hoverParent: rootEl,
-        targetEl: card,
-        linktext: currentFile.path,
-      });
-    });
-
-    card.addEventListener('contextmenu', (event: MouseEvent) => {
-      const menu = new Menu(this.app);
-      const file = this.app.vault.getAbstractFileByPath(currentFile.path);
-      this.app.workspace.trigger(
-        'file-menu',
-        menu,
-        file,
-        'link-context-menu',
-      );
-      menu.showAtPosition({ x: event.clientX, y: event.clientY });
-    });
-
-    card.addEventListener('click', (event: MouseEvent) => {
-      this.focusFile(currentFile, event.ctrlKey || event.metaKey);
-    });
-
-    const navFileDelete = card.createDiv({ cls: 'card-list-file-delete menu-item-icon' })
-    navFileDelete.appendChild(getIcon('lucide-x'));
-    navFileDelete.addEventListener('click', async () => {
-      await this.removeFile(currentFile);
-      this.redraw();
-    })
-
-    return card;
-  }
-
-
-  private readonly removeFile = async (file: FilePath): Promise<void> => {
-    this.data.recentFiles = this.data.recentFiles.filter(
-      (currFile) => currFile.path !== file.path,
-    );
-    await this.plugin.pruneLength(); // Handles the save
-  }
+  // private readonly removeFile = async (file: FilePath): Promise<void> => {
+  //   this.data.recentFiles = this.data.recentFiles.filter(
+  //     (currFile) => currFile.path !== file.path,
+  //   );
+  //   await this.plugin.pruneLength(); // Handles the save
+  // }
 
   // private readonly updateData = async (file: TFile): Promise<void> => {
   //   this.data.recentFiles = this.data.recentFiles.filter(
@@ -278,14 +137,14 @@ class CardListView extends ItemView {
   //   await this.plugin.pruneLength(); // Handles the save
   // };
 
-  // private readonly update = async (openedFile: TFile): Promise<void> => {
-  //   if (!openedFile || !this.plugin.shouldAddFile(openedFile)) {
-  //     return;
-  //   }
+  private readonly update = async (openedFile: TFile): Promise<void> => {
+    // if (!openedFile || !this.plugin.shouldAddFile(openedFile)) {
+    //   return;
+    // }
 
-  //   await this.updateData(openedFile);
-  //   this.redraw();
-  // };
+    // await this.updateData(openedFile);
+    // this.redraw();
+  };
 
   /**
    * Open the provided file in the most recent leaf.
@@ -294,7 +153,7 @@ class CardListView extends ItemView {
    * the most recent split. If the most recent split is pinned, this is set to
    * true.
    */
-  private readonly focusFile = (file: FilePath, shouldSplit = false): void => {
+   private readonly focusFile = (file: FilePath, shouldSplit = false): void => {
     const targetFile = this.app.vault
       .getFiles()
       .find((f) => f.path === file.path);
@@ -321,6 +180,7 @@ class CardListView extends ItemView {
       // this.redraw();
     }
   };
+
 }
 
 export default class RecentFilesPlugin extends Plugin {

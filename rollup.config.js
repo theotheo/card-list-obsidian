@@ -3,9 +3,9 @@ import {nodeResolve} from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 
 export default {
-  input: 'main.ts',
+  input: 'main.tsx',
   output: {
-    dir: '.',
+    dir: '/home/i/Documents/main/.obsidian/plugins/recent-files-obsidian',
     sourcemap: 'inline',
     format: 'cjs',
     exports: 'default'
