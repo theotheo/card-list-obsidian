@@ -258,7 +258,7 @@ export const CardsView = ({ plugin }): React.JSX.Element => {
     }, [searchValue])
 
 
-    return <div className="oz-file-list-pane-horizontal nav-folder mod-root">
+    return <div className="card-list-pane-horizontal nav-folder mod-root">
         <form method="post" onSubmit={processSearch}>
             <input type='text' placeholder="поиск" onChange={e => setInputValue(e.target.value)} value={inputValue} />
         </form>
@@ -310,17 +310,17 @@ export const ReactView = ({ plugin }): React.JSX.Element => {
         setClientX(e.nativeEvent.clientX);
     }
 
-    return <div className="file-tree-container-horizontal" onMouseMove={(e) => touchMouseMove(e)} onMouseUp={(e) => touchMouseEnd(e)}>
+    return <div className="card-list-container-horizontal" onMouseMove={(e) => touchMouseMove(e)} onMouseUp={(e) => touchMouseEnd(e)}>
 
         <div
-            className="oz-folder-pane-horizontal"
+            className="card-list-pane-horizontal"
             ref={folderPaneRef}
             style={{ width: folderPaneWidth ? `${folderPaneWidth}px` : widthSetting && widthSetting !== '' ? `${widthSetting}px` : '50%' }}>
             <SearchView />
         </div>
 
         <div
-            id="file-tree-divider-horizontal"
+            id="card-list-divider-horizontal"
             ref={dividerRef}
             onClick={(e) => e.preventDefault()}
             onMouseDown={(e) => touchMouseStart(e)}
