@@ -3,6 +3,10 @@
   align-items: unset;
 }
 
+.search-list-icon {
+  display: flex;
+}
+
 .card-list-title-content {
   flex-grow: 1;
 }
@@ -33,7 +37,7 @@
 .card-container {
   display: flex;
   max-width: 800px;
-  margin: 20px auto;
+  margin: 10px auto;
   border: 1px solid #ccc;
   border-radius: 8px;
   overflow: hidden;
@@ -52,10 +56,13 @@
   display: flex;
   flex-direction: column;
   font-size: 10px;
+  justify-content: space-around;
 }
 
 .text-container h4 {
   margin: 0 0 0px;
+  min-height: 12px;
+  text-overflow: ellipsis;
 }
 
 .text-snippet {
