@@ -45,6 +45,9 @@ const DEFAULT_DATA: CardListData = {
 
 const CardListViewType = 'card-list';
 
+
+const AppContext = createContext<App | undefined>(undefined);
+
 class CardListView extends ItemView {
   private readonly plugin: RecentFilesPlugin;
   private data: CardListData;
@@ -112,9 +115,11 @@ class CardListView extends ItemView {
 
     this.root = createRoot(this.containerEl.children[1]);
 		this.root.render(
-			<RecoilRoot>
-				<ReactView plugin={this} />
-			</RecoilRoot>
+      <AppContext.Provider value={this}>
+        <RecoilRoot>
+          <ReactView plugin={this} />
+        </RecoilRoot>
+      </AppContext.Provider>
 		);
 
 
@@ -252,23 +257,6 @@ export default class RecentFilesPlugin extends Plugin {
     await super.saveData(this.data);
   }
 
-  public readonly pruneOmittedFiles = async (): Promise<void> => {
-    this.data.recentFiles = this.data.recentFiles.filter(this.shouldAddFile);
-    await this.saveData();
-  };
-
-  public readonly pruneLength = async (): Promise<void> => {
-    const toRemove =
-      this.data.recentFiles.length - (this.data.maxLength || defaultMaxLength);
-    if (toRemove > 0) {
-      this.data.recentFiles.splice(
-        this.data.recentFiles.length - toRemove,
-        toRemove,
-      );
-    }
-    await this.saveData();
-  };
-
   public readonly shouldAddFile = (file: FilePath): boolean => {
     const patterns: string[] = this.data.omittedPaths.filter(
       (path) => path.length > 0,
@@ -298,35 +286,6 @@ export default class RecentFilesPlugin extends Plugin {
       type: CardListViewType,
       active: true,
     });
-  };
-
-  private readonly handleRename = async (
-    file: TAbstractFile,
-    oldPath: string,
-  ): Promise<void> => {
-    const entry = this.data.recentFiles.find(
-      (recentFile) => recentFile.path === oldPath,
-    );
-    if (entry) {
-      entry.path = file.path;
-      entry.basename = this.trimExtension(file.name);
-      this.view.redraw();
-      await this.saveData();
-    }
-  };
-
-  private readonly handleDelete = async (
-    file: TAbstractFile,
-  ): Promise<void> => {
-    const beforeLen = this.data.recentFiles.length;
-    this.data.recentFiles = this.data.recentFiles.filter(
-      (recentFile) => recentFile.path !== file.path,
-    );
-
-    if (beforeLen !== this.data.recentFiles.length) {
-      this.view.redraw();
-      await this.saveData();
-    }
   };
 
   // trimExtension can be used to turn a filename into a basename when

@@ -1,19 +1,64 @@
 import {
     getIcon,
+    Menu,
+    MetadataCache,
+    setIcon,
     TFile,
 } from 'obsidian';
 import { useEffect, useRef, useState } from 'react';
 import * as React from 'react';
 import { atom, useRecoilState, useSetRecoilState } from 'recoil';
 
-const _searchValue = atom({
+interface IconProps {
+    name: string;
+    className?: string;
+}
+
+const Icon = ({ name, className }: IconProps): React.JSX.Element => (
+    <span
+        data-icon={name}
+        className={className}
+        ref={(c) => {
+            if (c) {
+                setIcon(c, name);
+            }
+        }}
+    />
+)
+
+interface SearchValue {
+    query: string,
+    raw: string,
+    timestamp: Date,
+    type: 'tag' | 'strict'
+}
+
+const _searchValue = atom<SearchValue>({
     key: 'searchValue',
-    default: '',
+    default: { query: '', timestamp: new Date(), type: 'strict', raw: '' },
 });
 
-const _searchList = atom({
+
+const localStorageEffect = key => ({ setSelf, onSet }) => {
+    const savedValue = localStorage.getItem(key)
+    if (savedValue !== null) {
+        const parsed = JSON.parse(savedValue);
+        const converted = parsed.map(s => ({ ...s, 'timestamp': new Date(s.timestamp) }));
+        setSelf(converted);
+    }
+
+    onSet((newValue, _, isReset): void => 
+        isReset ? 
+            localStorage.removeItem(key) : 
+            localStorage.setItem(key, JSON.stringify(newValue)));
+};
+
+const _searchList = atom<SearchValue[]>({
     key: 'searchList',
-    default: [{ query: 'test', timestamp: new Date() }],
+    default: [{ query: 'test', timestamp: new Date(), type: 'strict', raw: 'test' }],
+    effects: [
+        localStorageEffect('search_list'),
+    ]
 });
 
 const defaultMaxLength = 50
@@ -60,10 +105,10 @@ const CardView = ({ currentFile, plugin }): React.JSX.Element => {
     if (content) {
         if (metadata?.frontmatter) {
             const withoutFrontmatter = content.split('---', 3)[2]
-            textSnippet = withoutFrontmatter.substring(0, 265);
+            textSnippet = withoutFrontmatter.substring(0, 240);
         }
         else {
-            textSnippet = content.substring(0, 265);
+            textSnippet = content.substring(0, 240);
         }
     }
 
@@ -74,8 +119,20 @@ const CardView = ({ currentFile, plugin }): React.JSX.Element => {
         })()
     }, [])
 
+    const cm = (event: MouseEvent): void => {
+        const menu = new Menu(plugin);
+        const file = plugin.app.vault.getAbstractFileByPath(currentFile.path);
+        plugin.app.workspace.trigger(
+            'file-menu',
+            menu,
+            currentFile,
+            'link-context-menu',
+        );
+        menu.showAtPosition({ x: event.clientX, y: event.clientY });
+    }
 
-    return <div className="card-container nav-file card-list-file" onClick={event => plugin.focusFile(currentFile, event.ctrlKey || event.metaKey)}>
+
+    return <div className="card-container nav-file card-list-file" onContextMenu={cm} onClick={event => plugin.focusFile(currentFile, event.ctrlKey || event.metaKey)}>
         <div className="text-container">
             <h4 className="card-list-title">{currentFile.name}</h4>
             <p className='text-snippet'>{textSnippet}</p>
@@ -102,14 +159,15 @@ export const SearchView = (): React.JSX.Element => {
         );
         setSearchList(newSearchList)
     }
-    const icon = getIcon('lucide-x')
-    console.log(icon.outerHTML);
 
+    // const icon = getIcon('lucide-x')
 
     return <div>
         {searchList.map(search =>
             <div key={search.timestamp.toISOString()} className='tree-item-self nav-file-title card-list-title'>
-                <div onClick={e => setSearchValue(search.query)} style={{width: '100%'}} className='is-clickable '>{search.query}</div>
+                {search.type === 'tag' && <Icon name={'lucide-hash'} className={'search-list-icon'} />}
+
+                <div onClick={e => setSearchValue(search)} style={{ width: '100%' }} className='is-clickable '>{search.query}</div>
                 <div className='recent-files-file-delete menu-item-icon' onClick={() => removeFile(search.query)}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="svg-icon lucide-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
@@ -119,6 +177,22 @@ export const SearchView = (): React.JSX.Element => {
 }
 
 
+const parseSearch = (query: string): SearchValue => {
+    const search: SearchValue = { timestamp: new Date() }
+    const tagsRegex = /^tag:#(?<tag>.*)/;
+    const tagMatch = query.match(tagsRegex)
+    if (tagMatch) {
+        search['type'] = 'tag'
+        search['query'] = tagMatch.groups['tag']
+        search['raw'] = query
+    } else {
+        search['type'] = 'strict'
+        search['query'] = query
+        search['raw'] = query
+    }
+    return search
+}
+
 export const CardsView = ({ plugin }): React.JSX.Element => {
 
     const [searchValue, setSearchValue] = useRecoilState(_searchValue);
@@ -126,44 +200,66 @@ export const CardsView = ({ plugin }): React.JSX.Element => {
     const setSearchList = useSetRecoilState(_searchList);
     const [files, setFiles] = useState([]);
 
-    const handleSubmit = (e): void => {
+    const processSearch = (e): void => {
         e.preventDefault();
-        setSearchValue(inputValue)
-        setSearchList(prev => [...prev, { query: inputValue, timestamp: new Date() }])
+
+        const search = parseSearch(inputValue);
+        setSearchValue(search)
+        if (search.raw.length > 0) {
+            setSearchList(prev => [...prev, search])
+        }
     }
 
     useEffect(() => {
-
-        setInputValue(searchValue)
+        setInputValue(searchValue?.raw)
 
         let data = [];
         const allFiles = plugin.app.vault.getMarkdownFiles().sort((a, b) => (b.stat.mtime - a.stat.mtime))
 
-        const regex = new RegExp(searchValue);
+        if (searchValue.query?.length > 0) {
+            let index = 0
+            const regex = new RegExp(searchValue.query);
 
-        (async () => {
-            if (searchValue.length > 0) {
-                let index = 0
+            for (const file of allFiles) {
+                if (searchValue['type'] === 'tag') {
+                    const markdownFilePath = file.path
+                    const markdownFile = plugin.app.vault.getAbstractFileByPath(markdownFilePath)
 
-                for (const file of allFiles) {
-                    const contents = await plugin.app.vault.cachedRead(file);
-                    if (contents.match(regex)) {
-                        data.push(file)
-                        index += 1;
+
+                    try {
+                        const metadata = plugin.app.metadataCache.getFileCache(markdownFile as TFile)
+                        console.log(metadata?.frontmatter?.tags)
+                        const tags = metadata.frontmatter?.tags?.filter(t => t === searchValue.query)
+                        if (tags?.length > 0) {
+                            data.push(file)
+                            index += 1
+                        }
+                    } catch (error) {
+                        console.log(error)
                     }
-                    if (index > (plugin.data.maxLength || defaultMaxLength)) break;
                 }
-
-            } else {
-                data = allFiles.slice(0, plugin.data.maxLength || defaultMaxLength)
+                else {
+                    (async () => {
+                        const contents = await plugin.app.vault.cachedRead(file);
+                        if (contents.match(regex)) {
+                            data.push(file)
+                            index += 1;
+                        }
+                    })()
+                }
+                if (index > (plugin.data.maxLength || defaultMaxLength)) break;
             }
-            setFiles(data)
-        })()
+
+        } else {
+            data = allFiles.slice(0, plugin.data.maxLength || defaultMaxLength)
+        }
+        setFiles(data)
+
     }, [searchValue])
 
 
     return <div className="oz-file-list-pane-horizontal nav-folder mod-root">
-        <form method="post" onSubmit={handleSubmit}>
+        <form method="post" onSubmit={processSearch}>
             <input type='text' placeholder="поиск" onChange={e => setInputValue(e.target.value)} value={inputValue} />
         </form>
         <div className="nav-folder-children">
